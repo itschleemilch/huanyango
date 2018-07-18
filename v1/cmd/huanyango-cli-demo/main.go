@@ -2,6 +2,7 @@
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
+// This is a demo app that uses the Huanyango library to control a Huanyang VFD.
 package main
 
 import (
@@ -33,7 +34,7 @@ func main() {
 	fmt.Println("Huanyango Command Line Interface Demo")
 	fmt.Println("Commands: M3, M4, M5, Snnnn, ?, $, exit, help")
 
-	hyInv := &vfdio.HyInverter{}
+	hyInv := vfdio.NewVfd()
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Failed to open serial port '", *serialDevice, "'. Use --help flag.")

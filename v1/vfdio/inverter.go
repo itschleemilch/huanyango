@@ -16,6 +16,14 @@ import (
 	"time"
 )
 
+// HyInverter is the base of a VFD controller. It contains the configuration and run time variables.
+// Example usage:
+//
+//  handle := &HyInverter{}
+//  handle.Open("/dev/ttyUSB0", 11520, 3.47222, 750)
+//  defer handle.Close()
+//  handle.GCode("M3 S300")
+//
 type HyInverter struct {
 	port            io.ReadWriteCloser
 	hash16          crc16.Hash16
@@ -25,6 +33,7 @@ type HyInverter struct {
 	outputFrequency uint16
 	outputRpm       uint16
 	lastReceived    time.Time
+	pollIntervalSec float64
 	// The API sets and reads the output frequency, which has a linear relation to output RPM.
 	// Experimentally determined: 3.47222 (using the VFD display while spinning)
 	rpmToHertz float32
@@ -32,14 +41,22 @@ type HyInverter struct {
 	maxRpm uint16
 }
 
-const RequestInverterIntervalMillis int64 = 750
+// NewVfd creates an empty data struct. Please call Open and defer Close.
+func NewVfd() *HyInverter {
+	return &HyInverter{}
+}
 
-// Open creates a serial port handle for the Hy. Inverter.
-// Example portName: /dev/ttyUSB0
+// Inits a serial port handle and creates all required goroutines.
+// Param portName: OS specific refence to a serial port (examples - Windows: COM3, Linux: /dev/ttyUSB0).
+// Param maxRpm: Maximum allowed and outputed rpm - for instance 11520 /min.
+// Param rpmToHertz: This constant is used to calculate the set frequency for the VFD. If unknown, set
+// to 1 and check the VFD display to calculate this value afterwards.
+// Param rpmPollInterval: This is used to regularly check the is value of the output frequency.
 func (o *HyInverter) Open(portName string, maxRpm uint16, rpmToHertz float64, rpmPollInterval int64) (err error) {
 	o.once.Do(func() {
 		o.rpmToHertz = float32(rpmToHertz)
 		o.maxRpm = maxRpm
+		o.pollIntervalSec = float64(rpmPollInterval) / 1000.0
 		options := serial.OpenOptions{
 			PortName:        portName,
 			BaudRate:        9200,
@@ -59,6 +76,8 @@ func (o *HyInverter) Open(portName string, maxRpm uint16, rpmToHertz float64, rp
 	return
 }
 
+// GCode is the external control input. It accepts string messages in the standard G-Code format.
+// Accepted commands: M2, M3, M4, M5, Sxxx. Aliases for M5: M0, M1, M30, M60.
 func (o *HyInverter) GCode(cmd string) (ok bool) {
 	subCmds := strings.Fields(cmd) // splits by whitespace
 	for _, subCmd := range subCmds {
@@ -152,17 +171,22 @@ func parseModbusRTU(handle *HyInverter, msg []byte) {
 	}
 }
 
+// OutputFrequency returns the raw value from the VFD.
+// Please also check Online() to see if the value is valid.
 func (o *HyInverter) OutputFrequency() uint16 {
 	return o.outputFrequency
 }
 
+// OutputRpm returns the converted output frequency (rpm := output_frequency / rpm-to-hertz).
+// Please also check Online() to see if the value is valid.
 func (o *HyInverter) OutputRpm() uint16 {
 	return o.outputRpm
 }
 
+// Online returns true if the last received message by the VFD was lately.
 func (o *HyInverter) Online() bool {
 	rxDiff := time.Now().Sub(o.lastReceived)
-	if rxDiff.Seconds() < 2 {
+	if rxDiff.Seconds() < 2*o.pollIntervalSec {
 		return true
 	} else {
 		return false
@@ -173,6 +197,7 @@ func (o *HyInverter) initCRC() {
 	o.hash16 = crc16.New(crc16.Modbus)
 }
 
+// Close closes all handles and goroutines.
 func (o *HyInverter) Close() {
 	o.stop = true
 	o.port.Close()
