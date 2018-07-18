@@ -1,8 +1,10 @@
 # Huanyango
 
-This is a library can control Huanyang VFD spindles.
+![Image of Huanyang VFD](https://github.com/jakesgordon/javascript-state-machine/blob/master/huanyang_vfd.jpg)
 
-A serial port is used to send and receive the MODBUS-like control messages.
+This is a library can control Huanyang VFD (variable frequency drive) as used in CNC applications.
+
+Here a serial port is used to send and receive the MODBUS-alike control messages.
 
 ## Installation
 
@@ -54,13 +56,13 @@ pi@rpi_cnc:~/go/bin $ ./huanyango-cli-demo
 Huanyango Command Line Interface Demo
 Commands: M3, M4, M5, Snnnn, ?, $, exit, help
 > M3 S250
-> > ?
+> ?
 > Output RPM 1/min:  249
-> > $
+> $
 > Commands: M3, M4, M5, Snnnn, ?, $, exit, help
-> > M4
-> > M5
-> > exit
+> M4
+> M5
+> exit
 > End.
 ```
 
