@@ -25,19 +25,21 @@ type HyInverter struct {
 	outputFrequency uint16
 	outputRpm       uint16
 	lastReceived    time.Time
+	// The API sets and reads the output frequency, which has a linear relation to output RPM.
+	// Experimentally determined: 3.47222 (using the VFD display while spinning)
+	rpmToHertz float32
+	// Experimentally determined with inverter: 11520 at my setup.
+	maxRpm uint16
 }
 
 const RequestInverterIntervalMillis int64 = 750
 
-// Experimentally determined with Inverter display.
-// May be different on other setups.
-const inverterHertzPerRpm float32 = 3.47222
-const maxRpm = 11520 // Experimentally determined with inverter
-
 // Open creates a serial port handle for the Hy. Inverter.
 // Example portName: /dev/ttyUSB0
-func (o *HyInverter) Open(portName string) (err error) {
+func (o *HyInverter) Open(portName string, maxRpm uint16, rpmToHertz float64, rpmPollInterval int64) (err error) {
 	o.once.Do(func() {
+		o.rpmToHertz = float32(rpmToHertz)
+		o.maxRpm = maxRpm
 		options := serial.OpenOptions{
 			PortName:        portName,
 			BaudRate:        9200,
@@ -52,7 +54,7 @@ func (o *HyInverter) Open(portName string) (err error) {
 		o.cmdChannel = make(chan string, 10)
 		go processor(o, o.cmdChannel)
 		go parser(o)
-		go outFrequencyRequester(o)
+		go outFrequencyRequester(o, rpmPollInterval)
 	})
 	return
 }
@@ -89,7 +91,7 @@ func processor(handle *HyInverter, commands chan string) {
 		} else if strings.HasPrefix(cmd, "s") {
 			outputRpm, err := strconv.ParseUint(cmd[1:], 10, 16)
 			if err == nil {
-				inverterFrequency := uint16(float32(outputRpm) * inverterHertzPerRpm)
+				inverterFrequency := uint16(float32(outputRpm) * handle.rpmToHertz)
 				fBytes := make([]byte, 2)
 				binary.BigEndian.PutUint16(fBytes, uint16(inverterFrequency))
 				// Set frequency
@@ -107,9 +109,9 @@ func processor(handle *HyInverter, commands chan string) {
 	}
 }
 
-func outFrequencyRequester(handle *HyInverter) {
+func outFrequencyRequester(handle *HyInverter, pollInterval int64) {
 	for !handle.stop {
-		time.Sleep(time.Millisecond * time.Duration(RequestInverterIntervalMillis))
+		time.Sleep(time.Millisecond * time.Duration(pollInterval))
 		handle.GCode("?")
 	}
 }
@@ -143,7 +145,7 @@ func parseModbusRTU(handle *HyInverter, msg []byte) {
 				fBytes[0] = msg[4]
 				fBytes[1] = msg[5]
 				handle.outputFrequency = binary.BigEndian.Uint16(fBytes)
-				handle.outputRpm = uint16(float32(handle.outputFrequency) / inverterHertzPerRpm)
+				handle.outputRpm = uint16(float32(handle.outputFrequency) / handle.rpmToHertz)
 				handle.lastReceived = time.Now()
 			}
 		}

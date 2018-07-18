@@ -47,6 +47,20 @@ This library and examples were developed on a Raspberry PI 3. The used serial in
 ```
 go get -u github.com/itschleemilch/huanyango/v1/cmd/huanyango-cli-demo
 ```
+Example usage:
+
+```
+Huanyango Command Line Interface Demo
+M3
+S100
+M5
+M03
+M4
+?
+Output RPM 1/min:  99
+$
+HyInverter Connected and Online:  true
+```
 
 ## Further reading
 
