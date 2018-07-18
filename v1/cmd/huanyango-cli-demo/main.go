@@ -7,7 +7,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"ksgbr/cnc6040/hyinverter"
+	"github.com/itschleemilch/huanyango/v1/vfdio"
 	"os"
 )
 
@@ -24,7 +24,7 @@ func main() {
 	fmt.Println()
 	fmt.Printf("Selected Port: %s\n", portName)
 
-	hyInv := &hyinverter.HyInverter{}
+	hyInv := &vfdio.HyInverter{}
 	err := hyInv.Open(portName)
 	defer hyInv.Close()
 	if err != nil {
