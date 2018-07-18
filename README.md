@@ -1,8 +1,9 @@
 ![Image of Huanyang VFD](https://raw.githubusercontent.com/itschleemilch/huanyango/master/huanyang_vfd.jpg)
 # Huanyango
 
-This Go-library can control Huanyang VFD (variable frequency drive) as used in CNC applications.
+<a href="https://godoc.org/github.com/itschleemilch/huanyango/v1/vfdio"><img src="https://godoc.org/github.com/itschleemilch/huanyango/v1/vfdio?status.svg" alt="GoDoc"></a>
 
+This Go-library can control Huanyang VFD (variable frequency drive) as used in CNC applications.
 Here a serial port is used to send and receive the MODBUS-alike control messages.
 
 ## Installation
