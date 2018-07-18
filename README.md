@@ -50,17 +50,21 @@ go get -u github.com/itschleemilch/huanyango/v1/cmd/huanyango-cli-demo
 Example usage:
 
 ```
+pi@rpi_cnc:~/go/bin $ ./huanyango-cli-demo
 Huanyango Command Line Interface Demo
-M3
-S100
-M5
-M03
-M4
-?
-Output RPM 1/min:  99
-$
-HyInverter Connected and Online:  true
+Commands: M3, M4, M5, Snnnn, ?, $, exit, help
+> M3 S250
+> > ?
+> Output RPM 1/min:  249
+> > $
+> Commands: M3, M4, M5, Snnnn, ?, $, exit, help
+> > M4
+> > M5
+> > exit
+> End.
 ```
+
+A help text is provided when entering `./huanyango-cli-demo -h`.
 
 ## Further reading
 
