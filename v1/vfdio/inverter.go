@@ -46,7 +46,7 @@ func NewVfd() *HyInverter {
 	return &HyInverter{}
 }
 
-// Inits a serial port handle and creates all required goroutines.
+// Open inits a serial port handle and creates all required goroutines.
 // Param portName: OS specific refence to a serial port (examples - Windows: COM3, Linux: /dev/ttyUSB0).
 // Param maxRpm: Maximum allowed and outputed rpm - for instance 11520 /min.
 // Param rpmToHertz: This constant is used to calculate the set frequency for the VFD. If unknown, set
@@ -78,6 +78,7 @@ func (o *HyInverter) Open(portName string, maxRpm uint16, rpmToHertz float64, rp
 
 // GCode is the external control input. It accepts string messages in the standard G-Code format.
 // Accepted commands: M2, M3, M4, M5, Sxxx. Aliases for M5: M0, M1, M30, M60.
+// Returns true if the command stack has space for the new input.
 func (o *HyInverter) GCode(cmd string) (ok bool) {
 	subCmds := strings.Fields(cmd) // splits by whitespace
 	for _, subCmd := range subCmds {
@@ -136,7 +137,7 @@ func outFrequencyRequester(handle *HyInverter, pollInterval int64) {
 }
 
 func parser(handle *HyInverter) {
-	modbusRtu := make([]byte, 0)
+	var modbusRtu []byte = make([]byte, 0)
 	lastRead := time.Now()
 	rxBuf := make([]byte, 10)
 	for !handle.stop {
@@ -188,9 +189,8 @@ func (o *HyInverter) Online() bool {
 	rxDiff := time.Now().Sub(o.lastReceived)
 	if rxDiff.Seconds() < 2*o.pollIntervalSec {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 func (o *HyInverter) initCRC() {
