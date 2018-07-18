@@ -1,0 +1,19 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "eZ/zpOdvUQXeNXVqIWkmOB7GvSc=",
+			"path": "github.com/jacobsa/go-serial/serial",
+			"revision": "15cf729a72d49e837fa047a4142fa6e4d5ab45a1",
+			"revisionTime": "2018-01-30T16:41:00Z"
+		},
+		{
+			"checksumSHA1": "XOTMlpMcErV43qzt0zPTjGkMlu8=",
+			"path": "github.com/npat-efault/crc16",
+			"revision": "4128ccbe47c387ef36362690391e7e8da82057b0",
+			"revisionTime": "2016-10-13T17:00:08Z"
+		}
+	],
+	"rootPath": "github.com/itschleemilch/huanyango/v1"
+}
