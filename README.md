@@ -6,6 +6,8 @@
 This Go-library can control Huanyang VFD (variable frequency drive) as used in CNC applications.
 Here a serial port is used to send and receive the MODBUS-alike control messages.
 
+*Note: This is not an project owned by Huanyang Electrical Co. Limited.*
+
 ## Installation
 
 ```
