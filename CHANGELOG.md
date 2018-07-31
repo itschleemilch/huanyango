@@ -5,6 +5,8 @@ List of changes and releases of the library Huanyango.
 ---
 
 ## [Unreleased]
+### Added
+- New API to determine processing state of command queue and output frequency achievement
 ### Changed
 - GCode interpreter now can handle missing whitespace between commands
 

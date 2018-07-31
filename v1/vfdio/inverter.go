@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -31,6 +32,7 @@ type HyInverter struct {
 	stop            bool
 	once            sync.Once
 	cmdChannel      chan string
+	setFrequency    uint16
 	outputFrequency uint16
 	outputRpm       uint16
 	lastReceived    time.Time
@@ -40,6 +42,9 @@ type HyInverter struct {
 	rpmToHertz float32
 	// Experimentally determined with inverter: 11520 at my setup.
 	maxRpm uint16
+	// commandQueue is a counter which is increased by the gcode preprocessor and
+	// decreased by the gcode interpreter.
+	commandQueue int32
 }
 
 // gcodeSeparator splits GCODEs missing whitespace.
@@ -89,15 +94,26 @@ func (o *HyInverter) Open(portName string, maxRpm uint16, rpmToHertz float64, rp
 // GCode is the external control input. It accepts string messages in the standard G-Code format.
 // Accepted commands: M2, M3, M4, M5, Sxxx. Aliases for M5: M0, M1, M30, M60.
 // Returns true if the command stack has space for the new input.
+// This function also acts as a preprocessor since it reformats the input commands.
+// Examples:
+//
+//   M3S400
+//   M4 S5000
+//   M9 S0 M5
+//
 func (o *HyInverter) GCode(cmd string) (ok bool) {
+	ok = true
 	cleanedGcode := gcodeSeparator.ReplaceAllString(cmd, `$1 `)
 	subCmds := strings.Fields(cleanedGcode) // splits by whitespace
+	atomic.AddInt32(&o.commandQueue, int32(len(subCmds)))
 	for _, subCmd := range subCmds {
 		select {
 		case o.cmdChannel <- subCmd:
-			ok = true
+			break
 		default:
 			ok = false
+			atomic.AddInt32(&o.commandQueue, -1)
+			break
 		}
 	}
 	return
@@ -106,6 +122,7 @@ func (o *HyInverter) GCode(cmd string) (ok bool) {
 func processor(handle *HyInverter, commands chan string) {
 	for !handle.stop {
 		cmd := <-commands
+		atomic.AddInt32(&handle.commandQueue, -1)
 		cmd = strings.TrimSpace(strings.ToLower(cmd))
 		if cmd == "end" || cmd == "m0" || cmd == "m1" || cmd == "m30" || cmd == "m60" || cmd == "m5" || cmd == "m05" {
 			// Stop
@@ -123,6 +140,7 @@ func processor(handle *HyInverter, commands chan string) {
 			outputRpm, err := strconv.ParseUint(cmd[1:], 10, 16)
 			if err == nil {
 				inverterFrequency := uint16(float32(outputRpm) * handle.rpmToHertz)
+				handle.setFrequency = inverterFrequency
 				fBytes := make([]byte, 2)
 				binary.BigEndian.PutUint16(fBytes, uint16(inverterFrequency))
 				// Set frequency
@@ -202,6 +220,23 @@ func (o *HyInverter) Online() bool {
 		return true
 	}
 	return false
+}
+
+// Processed returns true if all commands were processed and
+// the output frequency is within 10% of the set frequency.
+func (o *HyInverter) Processed() (processed, outputFrequencyOk, commandsProcessed bool) {
+	lowerBound := float32(o.setFrequency) * 0.9
+	upperBound := float32(o.setFrequency) * 1.1
+	value := float32(o.outputFrequency)
+	if value > lowerBound && value < upperBound {
+		// Range test passed
+		outputFrequencyOk = true
+	}
+	if atomic.LoadInt32(&o.commandQueue) == 0 {
+		commandsProcessed = true
+	}
+	processed = outputFrequencyOk && commandsProcessed
+	return
 }
 
 func (o *HyInverter) initCRC() {
