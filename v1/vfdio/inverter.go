@@ -10,6 +10,7 @@ import (
 	"github.com/jacobsa/go-serial/serial"
 	"github.com/npat-efault/crc16"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -40,6 +41,15 @@ type HyInverter struct {
 	// Experimentally determined with inverter: 11520 at my setup.
 	maxRpm uint16
 }
+
+// gcodeSeparator splits GCODEs missing whitespace.
+// Example input: N12S20 F200M3 G28.3Z-100 Y-29.3
+// Usage:
+//
+//   fmt.Println(gcodeSeparator.ReplaceAllString(`N12S20 F200M3 G28.3Z-100 Y-29.3`, `$1 `))
+//
+// Output: "N12 S20 F200 M3 G28.3 Z-100 Y-29.3 "
+var gcodeSeparator *regexp.Regexp = regexp.MustCompile(`([a-zA-Z][\-+]*\d+\.*\d*)\s*`)
 
 // NewVfd creates an empty data struct. Please call Open and defer Close.
 func NewVfd() *HyInverter {
@@ -80,7 +90,8 @@ func (o *HyInverter) Open(portName string, maxRpm uint16, rpmToHertz float64, rp
 // Accepted commands: M2, M3, M4, M5, Sxxx. Aliases for M5: M0, M1, M30, M60.
 // Returns true if the command stack has space for the new input.
 func (o *HyInverter) GCode(cmd string) (ok bool) {
-	subCmds := strings.Fields(cmd) // splits by whitespace
+	cleanedGcode := gcodeSeparator.ReplaceAllString(cmd, `$1 `)
+	subCmds := strings.Fields(cleanedGcode) // splits by whitespace
 	for _, subCmd := range subCmds {
 		select {
 		case o.cmdChannel <- subCmd:
