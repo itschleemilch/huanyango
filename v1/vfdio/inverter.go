@@ -228,7 +228,7 @@ func (o *HyInverter) Processed() (processed, outputFrequencyOk, commandsProcesse
 	lowerBound := float32(o.setFrequency) * 0.9
 	upperBound := float32(o.setFrequency) * 1.1
 	value := float32(o.outputFrequency)
-	if value > lowerBound && value < upperBound {
+	if value >= lowerBound && value <= upperBound {
 		// Range test passed
 		outputFrequencyOk = true
 	}

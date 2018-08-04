@@ -25,7 +25,7 @@ func main() {
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
-	var serialDevice *string = flag.String("port", "/dev/ttyUSB0", "USB Port. Linux default: /dev/ttyUSB0. On Windows use COMx, e.g. COM3.")
+	var serialDevice *string = flag.String("port", "/dev/ttyMotorspindel", "USB Port. Linux default: /dev/ttyUSB0. On Windows use COMx, e.g. COM3. On Linux a symbolic link can be created using udev rules, see https://unix.stackexchange.com/a/183492.")
 	var pollRate *int64 = flag.Int64("interval", 750, "RPM status readout interval in milliseconds. Default: 750.")
 	var rpmHertzConversation *float64 = flag.Float64("rpm2hz", 3.47222, "Unit conversation from RPM to Hz. May be determined experimentally.")
 	var maxRpm *int64 = flag.Int64("maxrpm", 11520, "Maximum allowed RPM for your spindle.")
